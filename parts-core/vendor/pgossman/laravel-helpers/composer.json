@@ -1,0 +1,12 @@
+{
+    "name": "pgossman/laravel-helpers",
+    "description": "Additional helper functions for Laravel projects",
+    "version": "1.0.4",
+    "type": "library",
+    "autoload": {
+        "files": ["src/functions.php"]
+    },
+    "require": {
+        "laravel/framework": "~5.4"
+    }
+}
