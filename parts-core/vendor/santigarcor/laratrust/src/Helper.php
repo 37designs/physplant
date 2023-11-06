@@ -6,7 +6,6 @@ use InvalidArgumentException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphPivot;
-use Laratrust\Contracts\LaratrustTeamInterface;
 
 class Helper
 {
@@ -70,16 +69,8 @@ class Helper
         if (is_null($team) || !Config::get('laratrust.use_teams')) {
             return null;
         }
-        
-        if ($team instanceof LaratrustTeamInterface) {
-            return $team->getKey();
-        }
 
-        $team = call_user_func_array(
-                    [Config::get('laratrust.models.team'), 'where'],
-                    ['name', $team]
-                )->first();
-        return is_null($team) ? $team : $team->getKey();
+        return static::getIdFor($team, 'team');
     }
 
     /**
@@ -128,7 +119,8 @@ class Helper
         }
 
         $teamForeignKey = static::teamForeignKey();
-        return $rolePermission->pivot->$teamForeignKey == $team;
+
+        return $rolePermission['pivot'][$teamForeignKey] == $team;
     }
 
     /**
@@ -170,10 +162,14 @@ class Helper
             return $data;
         }
 
-        $model = (new $class)
-            ->setAttribute('id', $data['id'])
-            ->setAttribute('name', $data['name']);
+        if (!isset($data['pivot'])) {
+            throw new \Exception("The 'pivot' attribute in the {$class} is hidden");
+        }
 
+        $model = new $class;
+        $primaryKey = $model->getKeyName();
+
+        $model->setAttribute($primaryKey, $data[$primaryKey])->setAttribute('name', $data['name']);
         $model->setRelation(
             'pivot',
             MorphPivot::fromRawAttributes($model, $data['pivot'], 'pivot_table')

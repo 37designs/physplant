@@ -114,6 +114,27 @@ trait LaratrustUserTrait
     }
 
     /**
+     * Many-to-Many relations with Team associated through the roles.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphToMany
+     */
+    public function rolesTeams()
+    {
+        if (!Config::get('laratrust.use_teams')) {
+            return null;
+        }
+
+        return $this->morphToMany(
+                Config::get('laratrust.models.team'),
+                'user',
+                Config::get('laratrust.tables.role_user'),
+                Config::get('laratrust.foreign_keys.user'),
+                Config::get('laratrust.foreign_keys.team')
+            )
+            ->withPivot(Config::get('laratrust.foreign_keys.role'));
+    }
+
+    /**
      * Many-to-Many relations with Permission.
      *
      * @return \Illuminate\Database\Eloquent\Relations\MorphToMany
@@ -172,9 +193,7 @@ trait LaratrustUserTrait
         $team = Helper::fetchTeam($team);
 
         foreach ($this->cachedRoles() as $role) {
-            $role = Helper::hidrateModel(Config::get('laratrust.models.role'), $role);
-
-            if ($role->name == $name && Helper::isInSameTeam($role, $team)) {
+            if ($role['name'] == $name && Helper::isInSameTeam($role, $team)) {
                 return true;
             }
         }
@@ -245,10 +264,7 @@ trait LaratrustUserTrait
         $team = Helper::fetchTeam($team);
 
         foreach ($this->cachedPermissions() as $perm) {
-            $perm = Helper::hidrateModel(Config::get('laratrust.models.permission'), $perm);
-
-            if (Helper::isInSameTeam($perm, $team)
-                && str_is($permission, $perm->name)) {
+            if (Helper::isInSameTeam($perm, $team) && str_is($permission, $perm['name'])) {
                 return true;
             }
         }
@@ -256,9 +272,7 @@ trait LaratrustUserTrait
         foreach ($this->cachedRoles() as $role) {
             $role = Helper::hidrateModel(Config::get('laratrust.models.role'), $role);
 
-            if (Helper::isInSameTeam($role, $team)
-                && $role->hasPermission($permission)
-            ) {
+            if (Helper::isInSameTeam($role, $team) && $role->hasPermission($permission)) {
                 return true;
             }
         }
@@ -338,9 +352,9 @@ trait LaratrustUserTrait
             return $validateAll;
         } elseif ($options['return_type'] == 'array') {
             return ['roles' => $checkedRoles, 'permissions' => $checkedPermissions];
-        } else {
-            return [$validateAll, ['roles' => $checkedRoles, 'permissions' => $checkedPermissions]];
         }
+
+        return [$validateAll, ['roles' => $checkedRoles, 'permissions' => $checkedPermissions]];
     }
 
     /**
